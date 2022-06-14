@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a timer to schedule data transfers")
     parser.add_argument("--name", help="Name for the data transfer timer job")
     parser.add_argument("--label", help="Friendly label for the timer job")
-    parser.add_argument("--interval", help="Interval in seconds between timer jobs")
+    parser.add_argument("--interval", default=0, help="Interval in seconds between timer jobs")
     parser.add_argument("--source-endpoint", help="UUID of source globus endpoint")
     parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
     parser.add_argument("--secrets-file", default=f"{str(pathlib.Path.home())}/.globus_secrets",
@@ -86,7 +86,13 @@ if __name__ == "__main__":
     authorizer = globus_helpers.create_globus_authorizer(client_id, client_secret)
     transfer_client = globus_helpers.create_transfer_client(authorizer)
     transfer_data = globus_helpers.create_transfer_data(transfer_client, args.source_endpoint, args.dest_endpoint, csv_file)
-    timer_job = globus_helpers.create_timer_job(transfer_data, datetime.utcnow(), timedelta(seconds=args.interval), name=args.name)
+
+    if args.interval == 0:
+        interval = None
+    else:
+        interval = timedelta(seconds=args.interval)
+
+    timer_job = globus_helpers.create_timer_job(transfer_data, datetime.utcnow(), interval, name=args.name)
     timer_client = globus_helpers.create_timer_client(authorizer)
     timer_result = timer_client.create_job(timer_job)
     print(timer_result)
