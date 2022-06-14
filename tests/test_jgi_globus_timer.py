@@ -24,3 +24,16 @@ def test_error_if_credentials_are_not_set(tmp_path):
         main.get_client_secret(config)
     with pytest.raises(ValueError):
         main.get_client_id(config)
+
+
+def test_csv_file_reader(tmp_path):
+    csv_file_contents = """/global/cfs/cdirs/seqfs/ornl/global,/global,true"""
+    csv_file_path = tmp_path / "tahoma-manifest.csv"
+    csv_file_path.write_text(csv_file_contents)
+    csv_reader = main.read_csv_file(csv_file_path.as_posix())
+    for row in csv_reader:
+        assert csv_reader[row]["source_path"] == "/global/cfs/cdirs/seqfs/ornl/global"
+        assert csv_reader[row]["destination_path"] == "/global"
+        assert csv_reader[row]["recursive"] == "true"
+
+
