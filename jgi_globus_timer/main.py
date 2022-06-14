@@ -2,6 +2,7 @@ import argparse
 import configparser
 import csv
 import pathlib
+from datetime import datetime, timedelta
 
 import globus_sdk
 
@@ -25,17 +26,87 @@ def create_globus_authorizer(client_id, client_secret):
 
 
 def create_transfer_client(authorizer):
-    pass
+    """
+    Creates a transfer client object from globus SDK
+    :param authorizer: globus_sdk.AccessTokenAuthorizer
+    :return: globus_sdk.TransferClient
+    """
+    return globus_sdk.TransferClient(authorizer=authorizer)
 
 
 def read_secrets_ini(inifile):
-    config = configparser.ConfigParser()
-    config.read_file(open(inifile))
-    return config
+    """
+    Reads a ini file that contains the client id and secrets. This is used in lieu of
+    passing the credentials via the command line.
+    :param inifile:  filepath to the configuration file
+    :return: configparser.ConfigParser
+    """
+    conf = configparser.ConfigParser()
+    try:
+        conf.read_file(open(inifile))
+    except FileNotFoundError as e:
+        raise FileNotFoundError("Cannot locate configuration file. Please create one either in your homedir or provide"
+                                "a path")
+    return conf
+
+
+def get(config, section, value):
+    """
+    Getter function for ini config
+
+    :param config:  configparser.ConfigParser
+    :param section: ini file section
+    :param value:  configuration key to extract value from
+    :return:
+    """
+    try:
+        entry = config[section][value]
+    except KeyError as e:
+        raise KeyError(f"missing section: {section}")
+    if not entry:
+        raise ValueError(f"missing value: {entry}")
+
+
+def get_client_id(config):
+    return get(config, "globus", "client_id")
+
+
+def get_client_secret(config):
+    return get(config, "globus", "client_secret")
 
 
 def read_csv_file(csv_file):
-    pass
+    with open(csv_file, newline='') as csvfile:
+        fieldnames = ["source_path", "destination_path", "recursive"]
+        reader = csv.DictReader(csvfile, fieldnames=fieldnames)
+        return reader
+
+
+def strtobool(value):
+    boolstr = value.lower()
+    if boolstr == "true":
+        return True
+    elif boolstr == "false":
+        return False
+
+
+def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reader):
+    tdata = globus_sdk.TransferData(transfer_client,
+                                    src_endpoint,
+                                    dest_endpoint,
+                                    sync_level=0,
+                                    preserve_timestamp=True)
+    for row in csv_reader:
+        tdata.add_item(row["source_path"], row["destination_path"], recursive=strtobool(row["recursive"]))
+    return tdata
+
+
+def create_timer_client(authorizer):
+    return globus_sdk.TimerClient(authorizer)
+
+
+def create_timer_job(transfer_data, start, interval, name):
+    return globus_sdk.TimerJob.from_transfer_data(transfer_data, start, interval, name)
 
 
 if __name__ == "__main__":
@@ -46,22 +117,26 @@ if __name__ == "__main__":
     parser.add_argument("--interval", help="Interval in seconds between timer jobs")
     parser.add_argument("--source-endpoint", help="UUID of source globus endpoint")
     parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
+    parser.add_argument("--secrets-file", default=f"{str(pathlib.Path.home())}/.globus_secrets",
+                        help="path for  globus client id and secret")
     parser.add_argument("--items-file", help="Name of CSV file to parse")
 
-    parser.parse_args()
+    args = parser.parse_args()
 
-    user_home = pathlib.Path.home()
-    inifile = f"{str(user_home)}/.globus_secrets"
+    inifile = args.secrets_file
     config = read_secrets_ini(inifile)
+    client_id = get_client_id(config)
+    client_secret = get_client_secret(config)
+    csv_file = read_csv_file(args.items_file)
 
-    try:
-        client_id = config["globus"]["client_id"]
-        client_secret = config["globus"]["client_secret"]
-    except KeyError as e:
-        raise KeyError("Missing values in configuration file. Make sure client_id "
-                       "and client_secret are filled-in values")
-
+    # create the necessary globus objects
     authorizer = create_globus_authorizer(client_id, client_secret)
+    transfer_client = create_transfer_client(authorizer)
+    transfer_data = create_transfer_data(transfer_client, args.source_endpoint, args.dest_endpoint, csv_file)
+    timer_job = create_timer_job(transfer_data, datetime.utcnow(), timedelta(seconds=args.interval), name=args.name)
+    timer_client = create_timer_client(authorizer)
+    timer_result = timer_client.create_job(timer_job)
+    print(timer_result)
 
 
 
