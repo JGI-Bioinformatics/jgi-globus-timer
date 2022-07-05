@@ -38,6 +38,7 @@ def get(config, section, value):
         raise KeyError(f"missing section: {section}")
     if not entry:
         raise ValueError(f"missing value: {entry}")
+    return entry
 
 
 def get_client_id(config):
@@ -85,7 +86,10 @@ if __name__ == "__main__":
     # create the necessary globus objects
     authorizer = globus_helpers.create_globus_authorizer(client_id, client_secret)
     transfer_client = globus_helpers.create_transfer_client(authorizer)
-    transfer_data = globus_helpers.create_transfer_data(transfer_client, args.source_endpoint, args.dest_endpoint, csv_file)
+    transfer_data = globus_helpers.create_transfer_data(transfer_client,
+                                                        args.source_endpoint,
+                                                        args.dest_endpoint,
+                                                        csv_file)
 
     if args.interval == 0:
         interval = None
