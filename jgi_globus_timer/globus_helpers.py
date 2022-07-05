@@ -1,4 +1,7 @@
+import datetime
+
 import globus_sdk
+from globus_sdk import TimerJob
 
 
 def create_globus_authorizer(client_id, client_secret):
@@ -10,13 +13,9 @@ def create_globus_authorizer(client_id, client_secret):
     :param client_secret:  Client secret used to generate oauth2 tokens
     :return: globus_sdk.AccessTokenAuthorizer
     """
-    client = globus_sdk.ConfidentialAppAuthClient(client_id, client_secret)
-    token_response = client.oauth2_client_credentials_tokens()
-
-    # the useful values that you want at the end of this
-    globus_transfer_data = token_response.by_resource_server["transfer.api.globus.org"]
-    globus_transfer_token = globus_transfer_data["access_token"]
-    return globus_sdk.AccessTokenAuthorizer(globus_transfer_token)
+    scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
+    client = globus_sdk.ConfidentialAppAuthClient(client_id=client_id, client_secret=client_secret)
+    return globus_sdk.ClientCredentialsAuthorizer(client, scopes)
 
 
 def create_transfer_client(authorizer):
@@ -36,12 +35,16 @@ def strtobool(value):
         return False
 
 
-def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reader):
+def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reader, deadline=None):
+    if deadline is None:
+        now = datetime.datetime.utcnow()
+        deadline = now + datetime.timedelta(days=10)
     tdata = globus_sdk.TransferData(transfer_client,
                                     src_endpoint,
                                     dest_endpoint,
                                     sync_level=0,
-                                    preserve_timestamp=True)
+                                    preserve_timestamp=True,
+                                    deadline=str(deadline))
     for row in csv_reader:
         tdata.add_item(csv_reader[row]["source_path"],
                        csv_reader[row]["destination_path"],
@@ -50,8 +53,8 @@ def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reade
 
 
 def create_timer_client(authorizer):
-    return globus_sdk.TimerClient(authorizer)
+    return globus_sdk.TimerClient(authorizer=authorizer)
 
 
 def create_timer_job(transfer_data, start, interval, name):
-    return globus_sdk.TimerJob.from_transfer_data(transfer_data, start, interval, name=name)
+    return TimerJob.from_transfer_data(transfer_data, start, interval, name=name)
