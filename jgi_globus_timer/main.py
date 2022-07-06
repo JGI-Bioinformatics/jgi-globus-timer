@@ -65,46 +65,56 @@ def read_csv_file(csv_file):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Create a timer to schedule data transfers")
-    parser.add_argument("--name", help="Name for the data transfer timer job")
-    parser.add_argument("--label", help="Friendly label for the timer job")
-    parser.add_argument("--interval", default=0, help="Interval in seconds between timer jobs")
-    parser.add_argument("--source-endpoint", help="UUID of source globus endpoint")
-    parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
+    parser = argparse.ArgumentParser(description="Create or delete a Globus timer")
     parser.add_argument("--secrets-file", default=f"{str(pathlib.Path.home())}/.globus_secrets",
                         help="path for  globus client id and secret")
-    parser.add_argument("--items-file", help="Name of CSV file to parse")
+    subparsers = parser.add_subparsers(dest="command", help="Create a timer to schedule data transfers")
+
+    transfer_parser = subparsers.add_parser("transfer")
+    transfer_parser.add_argument("--name", help="Name for the data transfer timer job")
+    transfer_parser.add_argument("--label", help="Friendly label for the timer job")
+    transfer_parser.add_argument("--interval", default=300, help="Interval in seconds between timer jobs")
+    transfer_parser.add_argument("--source-endpoint", help="UUID of source globus endpoint")
+    transfer_parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
+    transfer_parser.add_argument("--items-file", help="Name of CSV file to parse")
+
+    delete_parser = subparsers.add_parser("delete")
+    delete_parser.add_argument("timer_id")
 
     args = parser.parse_args()
 
+    # parse for the client id and client secret
     inifile = args.secrets_file
     config = read_secrets_ini(inifile)
     client_id = get_client_id(config)
     client_secret = get_client_secret(config)
-    csv_file = read_csv_file(args.items_file)
 
-    # create the necessary globus objects
-    authorizer = globus_helpers.create_globus_authorizer(client_id, client_secret)
-    transfer_client = globus_helpers.create_transfer_client(authorizer)
-    transfer_data = globus_helpers.create_transfer_data(transfer_client,
-                                                        args.source_endpoint,
-                                                        args.dest_endpoint,
-                                                        csv_file)
+    # create the necessary globus tokens
+    token_response = globus_helpers.get_token_response(client_id, client_secret)
+    transfer_token = globus_helpers.get_transfer_token(token_response)
+    timer_token = globus_helpers.get_timer_token(token_response)
 
-    if args.interval == 0:
-        interval = None
-    else:
-        interval = timedelta(seconds=args.interval)
+    # create the authorizers from their respective tokens
+    transfer_authorizer = globus_helpers.create_globus_authorizer(transfer_token)
+    timer_authorizer = globus_helpers.create_globus_authorizer(timer_token)
 
-    timer_job = globus_helpers.create_timer_job(transfer_data, datetime.utcnow(), interval, name=args.name)
-    timer_client = globus_helpers.create_timer_client(authorizer)
-    timer_result = timer_client.create_job(timer_job)
-    print(timer_result)
+    # create the clients
+    transfer_client = globus_helpers.create_transfer_client(transfer_authorizer)
+    timer_client = globus_helpers.create_timer_client(timer_authorizer)
 
-
-
-
-
-
-
+    if args.command == "delete":
+        globus_helpers.delete_timer_job(timer_client, args.timer_id)
+    if args.command == "transfer":
+        inifile = args.secrets_file
+        config = read_secrets_ini(inifile)
+        client_id = get_client_id(config)
+        client_secret = get_client_secret(config)
+        csv_file = read_csv_file(args.items_file)
+        transfer_data = globus_helpers.create_transfer_data(transfer_client,
+                                                            args.source_endpoint,
+                                                            args.dest_endpoint,
+                                                            csv_file)
+        interval = timedelta(minutes=args.interval)
+        timer_job = globus_helpers.create_timer_job_object(transfer_data, datetime.utcnow(), interval, name=args.name)
+        globus_helpers.create_timer_job(timer_client, timer_job)
 
