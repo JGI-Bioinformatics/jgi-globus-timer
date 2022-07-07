@@ -99,7 +99,7 @@ def list_timer_jobs(timer_client):
 
 def get_timer_job(timer_client, job_id):
     response = timer_client.get_job(job_id)
-    assert response.https_status == 200
+    assert response.http_status == 200
     return response.text
 
 
