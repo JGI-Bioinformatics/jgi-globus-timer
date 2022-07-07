@@ -78,8 +78,19 @@ if __name__ == "__main__":
     transfer_parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
     transfer_parser.add_argument("--items-file", help="Name of CSV file to parse")
 
+    list_parser = subparsers.add_parser("list")
+
+    get_parser = subparsers.add_parser("get")
+    get_parser.add_argument("job_id")
+
     delete_parser = subparsers.add_parser("delete")
     delete_parser.add_argument("timer_id")
+
+    update_parser = subparsers.add_parser("update")
+    update_parser.add_argument("job_id")
+    update_parser.add_argument("--name", help="Name for the data transfer timer job")
+    update_parser.add_argument("--label", help="Friendly label for the timer job")
+    update_parser.add_argument("--interval", help="Interval in seconds between timer jobs")
 
     args = parser.parse_args()
 
@@ -103,8 +114,27 @@ if __name__ == "__main__":
     timer_client = globus_helpers.create_timer_client(timer_authorizer)
 
     if args.command == "delete":
-        globus_helpers.delete_timer_job(timer_client, args.timer_id)
-    if args.command == "transfer":
+        print(globus_helpers.delete_timer_job(timer_client, args.timer_id))
+    elif args.command == "list":
+        print(globus_helpers.list_timer_jobs(timer_client))
+    elif args.command == "get":
+        print(globus_helpers.get_timer_job(timer_client, args.job_id))
+    elif args.command == "update":
+        update_params = {}
+        try:
+            update_params["name"] = args.name
+        except AttributeError:
+            pass
+        try:
+            update_params["label"] = args.label
+        except AttributeError:
+            pass
+        try:
+            update_params["interval"] = args.interval
+        except AttributeError:
+            pass
+        print(globus_helpers.update_timer_job(timer_client, args.job_id, update_params))
+    elif args.command == "transfer":
         inifile = args.secrets_file
         config = read_secrets_ini(inifile)
         client_id = get_client_id(config)
@@ -116,5 +146,6 @@ if __name__ == "__main__":
                                                             csv_file)
         interval = timedelta(minutes=args.interval)
         timer_job = globus_helpers.create_timer_job_object(transfer_data, datetime.utcnow(), interval, name=args.name)
-        globus_helpers.create_timer_job(timer_client, timer_job)
+        job_id = globus_helpers.create_timer_job(timer_client, timer_job)
+        print(f"Created job Timer Job ID: {job_id}")
 

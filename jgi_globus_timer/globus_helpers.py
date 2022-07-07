@@ -72,6 +72,8 @@ def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reade
     return tdata
 
 
+#------------------------- Timer Job Interface -------------------------------------
+# Supports the CRUD features needed for timer jobs
 def create_timer_job_object(transfer_data, start, interval, name):
     return TimerJob.from_transfer_data(transfer_data, start, interval, name=name)
 
@@ -79,10 +81,29 @@ def create_timer_job_object(transfer_data, start, interval, name):
 def create_timer_job(timer_client, timer_job):
     timer_response = timer_client.create_job(timer_job)
     assert timer_response.http_status == 201
-    job_id = timer_response["job_id"]
-    print(f"Timer Job ID: {job_id}")
+    return timer_response["job_id"]
+    return job_id
 
 
 def delete_timer_job(timer_client, job_id):
     response = timer_client.delete_job(job_id)
     assert response.http_status == 200
+    return response.text
+
+
+def list_timer_jobs(timer_client):
+    response = timer_client.list_jobs()
+    assert response.http_status == 200
+    return response.text
+
+
+def get_timer_job(timer_client, job_id):
+    response = timer_client.get_job(job_id)
+    assert response.https_status == 200
+    return response.text
+
+
+def update_timer_job(timer_client, job_id, update_params):
+    response = timer_client.update_job(job_id, update_params)
+    assert response.http_status == 200
+    return response.text
