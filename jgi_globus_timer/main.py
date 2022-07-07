@@ -2,6 +2,7 @@ import argparse
 import configparser
 import csv
 import pathlib
+import json
 from datetime import datetime, timedelta
 
 import globus_helpers
@@ -63,6 +64,11 @@ def read_csv_file(csv_file):
     return csv_file_contents
 
 
+def print_json(json_str):
+    response = json.loads(json_str)
+    print(json.dumps(response, indent=4, sort_keys=True))
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Create or delete a Globus timer")
@@ -114,11 +120,11 @@ if __name__ == "__main__":
     timer_client = globus_helpers.create_timer_client(timer_authorizer)
 
     if args.command == "delete":
-        print(globus_helpers.delete_timer_job(timer_client, args.timer_id))
+        print_json(globus_helpers.delete_timer_job(timer_client, args.timer_id))
     elif args.command == "list":
-        print(globus_helpers.list_timer_jobs(timer_client))
+        print_json(globus_helpers.list_timer_jobs(timer_client))
     elif args.command == "get":
-        print(globus_helpers.get_timer_job(timer_client, args.job_id))
+        print_json(globus_helpers.get_timer_job(timer_client, args.job_id))
     elif args.command == "update":
         update_params = {}
         try:
