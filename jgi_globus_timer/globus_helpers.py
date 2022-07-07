@@ -82,7 +82,6 @@ def create_timer_job(timer_client, timer_job):
     timer_response = timer_client.create_job(timer_job)
     assert timer_response.http_status == 201
     return timer_response["job_id"]
-    return job_id
 
 
 def delete_timer_job(timer_client, job_id):
