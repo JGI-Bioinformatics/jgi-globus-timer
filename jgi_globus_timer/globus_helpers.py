@@ -75,7 +75,8 @@ def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reade
 #------------------------- Timer Job Interface -------------------------------------
 # Supports the CRUD features needed for timer jobs
 def create_timer_job_object(transfer_data, start, interval, name):
-    return TimerJob.from_transfer_data(transfer_data, start, interval, name=name)
+    scope = "https://auth.globus.org/scopes/actions.globus.org/transfer/transfer"
+    return TimerJob.from_transfer_data(transfer_data, start, interval, name=name, scope=scope)
 
 
 def create_timer_job(timer_client, timer_job):
