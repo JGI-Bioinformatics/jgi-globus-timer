@@ -83,6 +83,7 @@ def main():
     transfer_parser.add_argument("--source-endpoint", help="UUID of source globus endpoint")
     transfer_parser.add_argument("--dest-endpoint", help="UUID of destination globus endpoint")
     transfer_parser.add_argument("--items-file", help="Name of CSV file to parse")
+    transfer_parser.add_argument("--stop-after-n", dest="n_runs", default=None, help="Stop after N timer runs")
 
     list_parser = subparsers.add_parser("list")
 
@@ -149,8 +150,14 @@ def main():
         transfer_data = globus_helpers.create_transfer_data(args.source_endpoint,
                                                             args.dest_endpoint,
                                                             csv_file)
-        interval = timedelta(minutes=args.interval)
-        timer_job = globus_helpers.create_timer_job_object(transfer_data, datetime.utcnow(), interval, name=args.name)
+        if args.n_runs is None:
+            interval = timedelta(minutes=args.interval)
+        else:
+            interval = None
+        timer_job = globus_helpers.create_timer_job_object(transfer_data,
+                                                           datetime.utcnow(),
+                                                           interval,
+                                                           args.name,
+                                                           args.n_runs)
         job_id = globus_helpers.create_timer_job(timer_client, timer_job)
         print(f"Created job Timer Job ID: {job_id}")
-

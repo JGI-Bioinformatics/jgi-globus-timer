@@ -63,9 +63,9 @@ def create_transfer_data(src_endpoint, dest_endpoint, csv_reader, deadline=None)
     transfer_data_body = {
         "source_endpoint_id": src_endpoint,
         "destination_endpoint_id": dest_endpoint,
-        "notify_on_succeeded": "false",
-        "notify_on_failed": "true",
-        "notify_on_inactive": "true",
+        "notify_on_succeeded": False,
+        "notify_on_failed": True,
+        "notify_on_inactive": True,
         "transfer_items": []
     }
 
@@ -81,9 +81,14 @@ def create_transfer_data(src_endpoint, dest_endpoint, csv_reader, deadline=None)
 
 #------------------------- Timer Job Interface -------------------------------------
 # Supports the CRUD features needed for timer jobs
-def create_timer_job_object(transfer_data, start, interval, name):
+def create_timer_job_object(transfer_data, start, interval, name, stop_after_n):
     scope = "https://auth.globus.org/scopes/actions.globus.org/transfer/transfer"
-    return TimerJob.from_transfer_data(transfer_data, start, interval, name=name, scope=scope)
+    return TimerJob.from_transfer_data(transfer_data,
+                                       start,
+                                       interval,
+                                       name=name,
+                                       scope=scope,
+                                       stop_after_n=stop_after_n)
 
 
 def create_timer_job(timer_client, timer_job):
