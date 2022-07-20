@@ -1,5 +1,7 @@
-from jgi_globus_timer import __version__, main
 import pytest
+
+from jgi_globus_timer import __version__, main, globus_helpers
+
 
 
 def test_version():
@@ -35,5 +37,33 @@ def test_csv_file_reader(tmp_path):
         assert csv_reader[row]["source_path"] == "/global/cfs/cdirs/seqfs/ornl/global"
         assert csv_reader[row]["destination_path"] == "/global"
         assert csv_reader[row]["recursive"] == "true"
+
+
+def test_transfer_data_body_creation():
+    src_endpoint = "go#ep1"
+    dest_endpoint = "go#ep2"
+    src = "/path/to/src/dir"
+    dest = "/path/to/dest/dir"
+    csv_reader = {
+        0: {
+            "source_path": src,
+            "destination_path": dest,
+            "recursive": "true"
+        }
+    }
+    transfer_data = globus_helpers.create_transfer_data(src_endpoint, dest_endpoint, csv_reader)
+
+    assert transfer_data["source_endpoint_id"] == src_endpoint
+    assert transfer_data["destination_endpoint_id"] == dest_endpoint
+
+    transfer_items = transfer_data["transfer_items"]
+    assert len(transfer_items) == 1
+
+    transfer = transfer_items.pop()
+    assert transfer["source_path"] == src
+    assert transfer["destination_path"] == dest
+    assert transfer["recursive"] == True
+
+
 
 

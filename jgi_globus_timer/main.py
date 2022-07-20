@@ -3,9 +3,9 @@ import configparser
 import csv
 import pathlib
 import json
-from datetime import datetime, timedelta
 
-import globus_helpers
+from datetime import datetime, timedelta
+from jgi_globus_timer import globus_helpers
 
 
 def read_secrets_ini(inifile):
@@ -69,7 +69,7 @@ def print_json(json_str):
     print(json.dumps(response, indent=4, sort_keys=True))
 
 
-if __name__ == "__main__":
+def main():
 
     parser = argparse.ArgumentParser(description="Create or delete a Globus timer")
     parser.add_argument("--secrets-file", default=f"{str(pathlib.Path.home())}/.globus_secrets",
@@ -146,8 +146,7 @@ if __name__ == "__main__":
         client_id = get_client_id(config)
         client_secret = get_client_secret(config)
         csv_file = read_csv_file(args.items_file)
-        transfer_data = globus_helpers.create_transfer_data(transfer_client,
-                                                            args.source_endpoint,
+        transfer_data = globus_helpers.create_transfer_data(args.source_endpoint,
                                                             args.dest_endpoint,
                                                             csv_file)
         interval = timedelta(minutes=args.interval)

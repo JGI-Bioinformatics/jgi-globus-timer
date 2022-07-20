@@ -55,21 +55,28 @@ def strtobool(value):
         return False
 
 
-def create_transfer_data(transfer_client, src_endpoint, dest_endpoint, csv_reader, deadline=None):
+def create_transfer_data(src_endpoint, dest_endpoint, csv_reader, deadline=None):
     if deadline is None:
         now = datetime.datetime.utcnow()
         deadline = now + datetime.timedelta(days=10)
-    tdata = globus_sdk.TransferData(transfer_client,
-                                    src_endpoint,
-                                    dest_endpoint,
-                                    sync_level=0,
-                                    preserve_timestamp=True,
-                                    deadline=str(deadline))
+
+    transfer_data_body = {
+        "source_endpoint_id": src_endpoint,
+        "destination_endpoint_id": dest_endpoint,
+        "notify_on_succeeded": "false",
+        "notify_on_failed": "true",
+        "notify_on_inactive": "true",
+        "transfer_items": []
+    }
+
+    tdata = {}
     for row in csv_reader:
-        tdata.add_item(csv_reader[row]["source_path"],
-                       csv_reader[row]["destination_path"],
-                       recursive=strtobool(csv_reader[row]["recursive"]))
-    return tdata
+        tdata["source_path"] = csv_reader[row]["source_path"]
+        tdata["destination_path"] = csv_reader[row]["destination_path"]
+        tdata["recursive"] = strtobool(csv_reader[row]["recursive"])
+
+    transfer_data_body["transfer_items"].append(tdata)
+    return transfer_data_body
 
 
 #------------------------- Timer Job Interface -------------------------------------
