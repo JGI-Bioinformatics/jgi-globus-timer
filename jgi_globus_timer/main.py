@@ -99,6 +99,10 @@ def main():
     update_parser.add_argument("--label", help="Friendly label for the timer job")
     update_parser.add_argument("--interval", help="Interval in seconds between timer jobs")
 
+    list_dir_parser = subparsers.add_parser("ls")
+    list_dir_parser.add_argument("endpoint", help="UUID of the endpoint to ls")
+    list_dir_parser.add_argument("--level", "-L", default=3, help="Depth of recursive listing")
+
     args = parser.parse_args()
 
     # parse for the client id and client secret
@@ -161,3 +165,6 @@ def main():
                                                            args.n_runs)
         job_id = globus_helpers.create_timer_job(timer_client, timer_job)
         print(f"Created job Timer Job ID: {job_id}")
+    elif args.command == "ls":
+        for item in globus_helpers.ls(transfer_client, args.endpoint, "/~/", int(args.level)):
+            print(item["name"])

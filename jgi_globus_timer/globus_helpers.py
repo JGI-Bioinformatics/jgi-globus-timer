@@ -1,6 +1,8 @@
 import datetime
 
 import globus_sdk
+
+from collections import deque
 from globus_sdk import TimerJob
 
 TRANSFER_SCOPE = "urn:globus:auth:scope:transfer.api.globus.org:all"
@@ -41,6 +43,40 @@ def create_transfer_client(authorizer):
     :return: globus_sdk.TransferClient
     """
     return globus_sdk.TransferClient(authorizer=authorizer)
+
+
+def _ls_helper(tc, ep, queue, max_depth):
+    while queue:
+        abs_path, rel_path, depth = queue.pop()
+        path_prefix = rel_path + "/" if rel_path else ""
+
+        res = tc.operation_ls(ep, path=abs_path)
+
+        if depth < max_depth:
+            queue.extend(
+                (
+                    res["path"] + item["name"],
+                    path_prefix + item["name"],
+                    depth + 1,
+                )
+                for item in res["DATA"]
+                if item["type"] == "dir"
+            )
+        for item in res["DATA"]:
+            if item["type"] == "file":
+                item["name"] = path_prefix + item["name"]
+                yield item
+
+
+def ls(transfer_client, ep, path, max_depth=3):
+    """
+    List the contents of a directory in Globus
+    :param transfer_client:
+    :return:
+    """
+    queue = deque()
+    queue.append((path, "", 0))
+    yield from _ls_helper(transfer_client, ep, queue, max_depth)
 
 
 def create_timer_client(authorizer):
