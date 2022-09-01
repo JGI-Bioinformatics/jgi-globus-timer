@@ -103,7 +103,7 @@ def create_transfer_data(src_endpoint, dest_endpoint, csv_reader, deadline=None)
         "notify_on_failed": True,
         "notify_on_inactive": True,
         "transfer_items": [],
-        "sync_level": 1
+        "sync_level": 1,
         "deadline": str(deadline)
     }
 
